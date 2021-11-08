@@ -1,19 +1,22 @@
 module Morphir.Web.MultiaryDecisionTreeTest exposing (..)
 
 import Browser
+import Morphir.IR as IR
 import Morphir.IR.Value as Value exposing (Pattern, RawValue, Value(..), toString, unit, variable)
 
 import Dict
 import Element exposing (Element, column, el, fill, html, layout, none, padding, paddingEach, px, row, shrink, spacing, table)
 import Html.Styled.Attributes exposing (class, css, id, placeholder, value, type_)
 import Html exposing (a)
-
-
+import Morphir.IR.Name as Name exposing (Name)
+import Dict exposing (Dict)
 import Html.Styled exposing (Html, div, fromUnstyled, map, option, select, text, toUnstyled, input)
 import Html.Styled.Events exposing (onInput)
-import Css exposing (auto, px, width)
+import Css exposing (auto, bold, fontSize, px, width, xxSmall)
 import Morphir.IR.Distribution exposing (Distribution(..))
 import Morphir.IR.FQName as FQName
+import Morphir.SDK.Bool exposing (false, true)
+import Morphir.Value.Error as Error
 import Morphir.Value.Interpreter as Interpreter exposing (matchPattern)
 import Morphir.IR.Literal as Literal exposing (Literal(..))
 import Morphir.IR.Name as Name
@@ -28,6 +31,7 @@ import Morphir.Visual.ViewValue as ViewValue
 import Morphir.Visual.VisualTypedValue exposing (VisualTypedValue)
 import Parser exposing (number)
 import String exposing (fromInt)
+import Svg.Attributes exposing (style)
 import Tree as Tree
 import TreeView as TreeView
 import Mwc.Button
@@ -55,6 +59,7 @@ type alias NodeData = {
     uid : String
     , subject : String
     , pattern : Maybe (Pattern())
+    , highlight : Bool
     }
 
 getLabel : Maybe (Pattern()) -> String
@@ -62,7 +67,20 @@ getLabel maybeLabel =
     case maybeLabel of
         Just label -> ViewPattern.patternAsText(label) ++ " - "
         Nothing -> ""
-
+evaluateHighlight : Dict Name RawValue -> RawValue -> Pattern () -> Bool
+evaluateHighlight variable value pattern =
+   let
+       evaluation =
+        Interpreter.evaluateValue (Dict.empty) IR.empty variable [] value
+   in
+   case evaluation of
+        Ok val ->
+            if ((Interpreter.matchPattern pattern val) ==
+                    Err (Error.PatternMismatch pattern value)) then
+                false
+            else
+                true
+        Err e -> false
 
 -- ViewPattern.patternAsText(node.data.pattern) ++ "->" ++ node.data.subject
 -- define a function to calculate the text representation of a node
@@ -158,8 +176,14 @@ setNodeContent nodeUid subject treeModel =
         (\nodeData -> { nodeData | subject = subject })
         treeModel
 
-update : Msg -> Model -> (Model, Cmd Msg)
+setNodeHighlight : String -> Bool -> TreeView.Model NodeData String NodeDataMsg (Maybe NodeData) -> TreeView.Model NodeData String NodeDataMsg (Maybe NodeData)
+setNodeHighlight nodeUid highlight treeModel =
+   TreeView.updateNodeData
+       (\nodeData -> nodeData.uid == nodeUid)
+       (\nodeData -> { nodeData | highlight = highlight })
+       treeModel
 
+update : Msg -> Model -> (Model, Cmd Msg)
 update message model =
     let
         treeModel =
@@ -167,7 +191,7 @@ update message model =
                 TreeViewMsg (TreeView.CustomMsg nodeDataMsg) ->
                     case nodeDataMsg of
                         EditContent nodeUid content ->
-                            setNodeContent nodeUid content model.treeModel
+                            setNodeHighlight nodeUid True model.treeModel
                 TreeViewMsg tvMsg ->
                     TreeView.update2 tvMsg model.treeModel
                 ExpandAll ->
@@ -203,12 +227,19 @@ expandAllCollapseAllButtons =
 selectedNodeDetails : Model -> Html Msg
 selectedNodeDetails model =
     let
+
         selectedDetails =
-            Maybe.map (\nodeData -> nodeData.uid ++ ": " ++ nodeData.subject) model.selectedNode
+            Maybe.map (\nodeData -> nodeData.uid ++ ": " ++ nodeData.subject ) model.selectedNode
                 |> Maybe.withDefault "(nothing selected)"
+
+        --selectedHighlight = Maybe.map (\nodeData -> nodeData.highlight) model.selectedNode
+
+
     in
+
+
         div
-            [ css [ width (auto) ] ]
+            [ css [ width (auto)] ]
             [ Mwc.TextField.view
                 [ Mwc.TextField.readonly True
                 , Mwc.TextField.label selectedDetails
@@ -282,7 +313,7 @@ translation2 (pattern, value) uid  =
         Value.IfThenElse _ condition thenBranch elseBranch ->
             let
 
-                data = NodeData (uid) (Value.toString condition) pattern
+                data = NodeData (uid) (Value.toString condition) pattern false
                 uids = createUIDS 2 uid
                 list = [(Just( Value.LiteralPattern () (BoolLiteral True)), thenBranch), (Just( Value.LiteralPattern () (BoolLiteral False)), elseBranch) ]
                 children : List ( Tree.Node NodeData )
@@ -295,7 +326,7 @@ translation2 (pattern, value) uid  =
 
         Value.PatternMatch tpe param patterns ->
             let
-                data = NodeData uid (Value.toString param) pattern
+                data = NodeData uid (Value.toString param) pattern false
                 maybePatterns = (toMaybeList patterns)
                 uids = createUIDS (List.length maybePatterns) uid
                 children : List ( Tree.Node NodeData )
@@ -306,7 +337,7 @@ translation2 (pattern, value) uid  =
                 }
         _ ->
             --Value.toString value ++ (fromInt uid) ++ " ------ "
-            Tree.Node { data = NodeData uid (Value.toString value) pattern, children = [] }
+            Tree.Node { data = NodeData uid (Value.toString value) pattern false, children = [] }
 
 createUIDS : Int -> String -> List ( String )
 createUIDS range currentUID =
