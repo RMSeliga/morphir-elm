@@ -5,22 +5,23 @@ import Morphir.IR.Value as Value exposing (Pattern, RawValue, Value(..), toStrin
 
 import Dict
 import Element exposing (Element, column, el, fill, html, layout, none, padding, paddingEach, px, row, shrink, spacing, table)
-import Html.Styled.Attributes exposing (class, css, id, placeholder, value)
+import Html.Styled.Attributes exposing (class, css, id, placeholder, value, type_)
 import Html exposing (a)
 
 
-import Html.Styled exposing (Html, div, fromUnstyled, map, option, select, text, toUnstyled)
-
+import Html.Styled exposing (Html, div, fromUnstyled, map, option, select, text, toUnstyled, input)
+import Html.Styled.Events exposing (onInput)
 import Css exposing (auto, px, width)
 import Morphir.IR.Distribution exposing (Distribution(..))
 import Morphir.IR.FQName as FQName
+import Morphir.Value.Interpreter as Interpreter exposing (matchPattern)
 import Morphir.IR.Literal as Literal exposing (Literal(..))
 import Morphir.IR.Name as Name
 import Morphir.IR.Package as Package
 import Morphir.IR.Type as Type
 import Morphir.IR.Value as Value exposing (ifThenElse, patternMatch)
 import Morphir.Visual.Components.MultiaryDecisionTree
-import Morphir.Visual.Config exposing (Config)
+import Morphir.Visual.Config exposing (Config, HighlightState(..))
 import Morphir.Visual.Theme as Theme
 import Morphir.Visual.ViewPattern as ViewPattern
 import Morphir.Visual.ViewValue as ViewValue
@@ -71,10 +72,10 @@ nodeLabel n =
        Tree.Node node -> getLabel(node.data.pattern) ++ node.data.subject
 
 -- define another function to calculate the uid of a node
-nodeUid : Tree.Node NodeData -> TreeView.NodeUid String
-nodeUid n =
-    case n of
-        Tree.Node node -> TreeView.NodeUid node.data.uid
+--nodeUid : Tree.Node NodeData -> TreeView.NodeUid String
+--nodeUid n =
+--    case n of
+--        Tree.Node node -> TreeView.NodeUid node.data.uid
 
 -- walk through wire frame
 -- confused why top level doesnt have anything corresponding
@@ -123,7 +124,7 @@ initialModel () =
                ]
     in
         ( { rootNodes = rootNodes
-        , treeModel = TreeView.initializeModel configuration rootNodes
+        , treeModel = TreeView.initializeModel2 configuration rootNodes
         , selectedNode = Nothing
         }
         , Cmd.none
@@ -132,38 +133,56 @@ initialModel () =
 -- initialize the TreeView model
 type alias Model =
     { rootNodes : List (Tree.Node NodeData)
-    , treeModel : TreeView.Model NodeData String Never ()
+    , treeModel : TreeView.Model NodeData String NodeDataMsg (Maybe NodeData)
     , selectedNode : Maybe NodeData
     }
-
+nodeUidOf : Tree.Node NodeData -> TreeView.NodeUid String
+nodeUidOf n =
+    case n of
+        Tree.Node node -> TreeView.NodeUid node.data.uid
 --construct a configuration for your tree view
-configuration : TreeView.Configuration NodeData String
+configuration : TreeView.Configuration2 NodeData String NodeDataMsg (Maybe NodeData)
 configuration =
-    TreeView.Configuration nodeUid nodeLabel TreeView.defaultCssClasses
+    TreeView.Configuration2 nodeUidOf viewNodeData TreeView.defaultCssClasses
 
 -- otherwise interact with your tree view in the usual TEA manner
 type Msg =
-  TreeViewMsg (TreeView.Msg String)
+  TreeViewMsg (TreeView.Msg2 String NodeDataMsg)
   | ExpandAll
   | CollapseAll
 
+setNodeContent : String -> String -> TreeView.Model NodeData String NodeDataMsg (Maybe NodeData) -> TreeView.Model NodeData String NodeDataMsg (Maybe NodeData)
+setNodeContent nodeUid subject treeModel =
+    TreeView.updateNodeData
+        (\nodeData -> nodeData.uid == nodeUid)
+        (\nodeData -> { nodeData | subject = subject })
+        treeModel
 
 update : Msg -> Model -> (Model, Cmd Msg)
+
 update message model =
     let
         treeModel =
             case message of
+                TreeViewMsg (TreeView.CustomMsg nodeDataMsg) ->
+                    case nodeDataMsg of
+                        EditContent nodeUid content ->
+                            setNodeContent nodeUid content model.treeModel
                 TreeViewMsg tvMsg ->
-                    TreeView.update tvMsg model.treeModel
+                    TreeView.update2 tvMsg model.treeModel
                 ExpandAll ->
                     TreeView.expandAll model.treeModel
                 CollapseAll ->
                     TreeView.collapseAll model.treeModel
+        selectedNode =
+            TreeView.getSelected treeModel |> Maybe.map .node |> Maybe.map Tree.dataOf
+
     in
         ( { model
         | treeModel = treeModel
-        , selectedNode = TreeView.getSelected treeModel |> Maybe.map .node |> Maybe.map Tree.dataOf
-        }, Cmd.none )
+        , selectedNode = selectedNode
+        },
+        Cmd.none )
 
 expandAllCollapseAllButtons : Html Msg
 expandAllCollapseAllButtons =
@@ -212,7 +231,7 @@ view model =
             --    , option [] [text "BOC"], option [] [text "Others"]]
             , expandAllCollapseAllButtons
             , selectedNodeDetails model
-            , map TreeViewMsg (TreeView.view model.treeModel |> fromUnstyled)
+            , map TreeViewMsg (TreeView.view2 model.selectedNode model.treeModel |> fromUnstyled)
 
             ]
 
@@ -220,10 +239,10 @@ view model =
 -- if (or when) you want the tree view to navigate up/down between visible nodes and expand/collapse nodes on arrow key presse
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.map TreeViewMsg (TreeView.subscriptions model.treeModel)
+    Sub.map TreeViewMsg (TreeView.subscriptions2 model.treeModel)
 
 
---
+
 main =
     Browser.element
         {
@@ -298,13 +317,20 @@ createUIDS range currentUID =
 
     in
         List.map appender stringRange
-----
+------
 --main =
 --    layout
 --            []
 --            <|
 --            (el [ padding 10 ]
-
+--                --(Element.text (
+--                --    case matchPattern ( Value.WildcardPattern ())  (Value.Variable () ["DAR"]) value of
+--                --        Ok _ ->
+--                --            Matched
+--                --        Err _ ->
+--                --            Unmatched
+--                --  )  )
+--                  )
                 --(Element.text (Value.toString (Value.IfThenElse () (Value.Variable () ["isFoo"]) (Value.Variable () ["Yes"])
                 --(Value.IfThenElse () (Value.Variable () ["isFoo"]) (Value.Variable () ["Yes"]) (Value.Variable () ["No"]))
                 --
@@ -337,7 +363,31 @@ createUIDS range currentUID =
                 --)
 
 
+type NodeDataMsg
+    = EditContent String String -- uid content
 
+viewNodeData : Maybe NodeData -> Tree.Node NodeData -> Html.Html NodeDataMsg
+viewNodeData selectedNode node =
+    let
+        nodeData =
+            Tree.dataOf node
+        selected =
+            selectedNode
+                |> Maybe.map (\sN -> nodeData.uid == sN.uid)
+                |> Maybe.withDefault False
+    in
+        if selected then
+            input
+                [ onInput <| EditContent nodeData.uid
+                , type_ "text"
+                , value nodeData.subject
+                ]
+                []
+                |> toUnstyled
+
+        else
+            text nodeData.subject
+                |> toUnstyled
 
 
 

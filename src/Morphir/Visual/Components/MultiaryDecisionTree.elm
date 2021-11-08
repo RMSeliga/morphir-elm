@@ -26,6 +26,7 @@ import Morphir.Visual.Components.DecisionTree exposing (BranchNode)
 import Morphir.Visual.Config exposing (Config)
 import Morphir.Visual.VisualTypedValue exposing (VisualTypedValue)
 
+
 ----
 -- define data type for values we put into tree node
 type alias NodeData = {
@@ -34,10 +35,12 @@ type alias NodeData = {
     , pattern : Maybe (Pattern())
     }
 
+
 --getPattern : ( a, b ) -> a
 ----- some method for getting pattern from list
 --
 --getNode : ( a, b ) -> b
+
 ----- some method for getting pattern from list
 
 
@@ -65,8 +68,8 @@ nodeUid n =
 type alias Model =
     { rootNodes : List (Tree.Node NodeData)
     , treeModel : TreeView.Model NodeData String Never ()
-    , selectedNode : Maybe NodeData
-    }
+    , selectedNode : Maybe NodeData }
+
 
 --construct a configuration for your tree view
 configuration : TreeView.Configuration NodeData String
@@ -128,6 +131,7 @@ selectedNodeDetails model =
 -- folding or reducing
 -- fold left --> more efficient
 -- value thus far and new element
+
 --displayList : Config msg -> (Config msg -> VisualTypedValue -> Element msg) -> BranchNode -> List (Element msg)
 --displayList config viewValue root =
     -- somehow iteratively call listHelp
@@ -152,9 +156,26 @@ selectedNodeDetails model =
 --
 ---- ( List.map (\x -> layoutHelp config viewValue x) branch.branches )
 --
+--displayList : Config msg -> (Config msg -> VisualTypedValue -> Element msg) -> BranchNode -> Element msg
+--displaylist config viewValue root =
+--    -- somehow iteratively call listHelp
+--    -- listHelp config viewValue root.branches[0]
+--    listHelp config viewValue (root
 --
---[
---(COND 1, NODE 1),
---(COND 2, NODE 2)
---]
 --
+--listHelp : Config msg -> (Config msg -> VisualTypedValue -> Element msg) -> ( Pattern(), Node ) -> Element msg
+--listHelp config viewValue (pattern, node) =
+--    -- let , in :: to get these values
+--    -- get pattern as its own variable
+--    -- get node as its own variable
+--
+--    -- case match to see if its a branch or a leaf
+--    -- case rootNode of
+--           -- Branch branch ->
+--           -- within branch we want to display the
+--
+
+
+
+
+-- ( List.map (\x -> layoutHelp config viewValue x) branch.branches )
