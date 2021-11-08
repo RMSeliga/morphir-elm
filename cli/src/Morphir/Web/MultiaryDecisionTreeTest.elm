@@ -178,6 +178,7 @@ setNodeContent nodeUid subject treeModel =
 
 setNodeHighlight : String -> Bool -> TreeView.Model NodeData String NodeDataMsg (Maybe NodeData) -> TreeView.Model NodeData String NodeDataMsg (Maybe NodeData)
 setNodeHighlight nodeUid highlight treeModel =
+
    TreeView.updateNodeData
        (\nodeData -> nodeData.uid == nodeUid)
        (\nodeData -> { nodeData | highlight = highlight })
@@ -192,6 +193,7 @@ update message model =
                     case nodeDataMsg of
                         EditContent nodeUid content ->
                             setNodeHighlight nodeUid True model.treeModel
+
                 TreeViewMsg tvMsg ->
                     TreeView.update2 tvMsg model.treeModel
                 ExpandAll ->
@@ -408,12 +410,14 @@ viewNodeData selectedNode node =
                 |> Maybe.withDefault False
     in
         if selected then
-            input
-                [ onInput <| EditContent nodeData.uid
-                , type_ "text"
-                , value nodeData.subject
-                ]
-                []
+            --input
+            --    [ onInput <| EditContent nodeData.uid
+            --    , type_ "text"
+            --    , value nodeData.subject
+            --    ]
+            --    []
+            --    |> toUnstyled
+            text (nodeData.subject ++ "str")
                 |> toUnstyled
 
         else
