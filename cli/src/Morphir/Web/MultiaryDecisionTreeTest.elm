@@ -1,11 +1,14 @@
 module Morphir.Web.MultiaryDecisionTreeTest exposing (..)
 
 import Browser
+import Browser.Events exposing (onClick)
 import Css exposing (auto, bold, fontSize, px, width, xxSmall)
 import Dict exposing (Dict)
-import Element exposing (Element, column, el, fill, html, layout, none, padding, paddingEach, px, row, shrink, spacing, table)
+import Element exposing (Element, column, el, fill, html, layout, none, padding, paddingEach, px, rgb, row, shrink, spacing, table)
+import Element.Background as Background
+import Element.Border as Border
 import Html exposing (a)
-import Html.Styled exposing (Html, div, fromUnstyled, input, map, option, select, text, toUnstyled)
+import Html.Styled exposing (Html, div, em, fromUnstyled, h1, input, label, map, option, select, text, toUnstyled)
 import Html.Styled.Attributes exposing (class, css, id, placeholder, type_, value)
 import Html.Styled.Events exposing (onInput)
 import Morphir.IR as IR
@@ -16,7 +19,6 @@ import Morphir.IR.Name as Name exposing (Name)
 import Morphir.IR.Package as Package
 import Morphir.IR.Type as Type
 import Morphir.IR.Value as Value exposing (Pattern, RawValue, Value(..), ifThenElse, patternMatch, toString, unit, variable)
-import Morphir.SDK.Bool exposing (false, true)
 import Morphir.Value.Error as Error
 import Morphir.Value.Interpreter as Interpreter exposing (matchPattern)
 import Morphir.Visual.Components.MultiaryDecisionTree
@@ -80,13 +82,13 @@ evaluateHighlight variable value pattern =
                 Interpreter.matchPattern pattern val
                     == Err (Error.PatternMismatch pattern value)
             then
-                false
+                False
 
             else
-                true
+                True
 
         Err e ->
-            false
+            False
 
 
 
@@ -215,12 +217,13 @@ type Msg
     | CollapseAll
 
 
-setNodeContent : String -> String -> TreeView.Model NodeData String NodeDataMsg (Maybe NodeData) -> TreeView.Model NodeData String NodeDataMsg (Maybe NodeData)
-setNodeContent nodeUid subject treeModel =
-    TreeView.updateNodeData
-        (\nodeData -> nodeData.uid == nodeUid)
-        (\nodeData -> { nodeData | subject = subject })
-        treeModel
+
+--setNodeContent : String -> String -> TreeView.Model NodeData String NodeDataMsg (Maybe NodeData) -> TreeView.Model NodeData String NodeDataMsg (Maybe NodeData)
+--setNodeContent nodeUid subject treeModel =
+--    TreeView.updateNodeData
+--        (\nodeData -> nodeData.uid == nodeUid)
+--        (\nodeData -> { nodeData | subject = subject })
+--        treeModel
 
 
 setNodeHighlight : String -> Bool -> TreeView.Model NodeData String NodeDataMsg (Maybe NodeData) -> TreeView.Model NodeData String NodeDataMsg (Maybe NodeData)
@@ -238,8 +241,11 @@ update message model =
             case message of
                 TreeViewMsg (TreeView.CustomMsg nodeDataMsg) ->
                     case nodeDataMsg of
-                        EditContent nodeUid content ->
+                        EditHighlight nodeUid True ->
                             setNodeHighlight nodeUid True model.treeModel
+
+                        EditHighlight nodeUid False ->
+                            setNodeHighlight nodeUid False model.treeModel
 
                 TreeViewMsg tvMsg ->
                     TreeView.update2 tvMsg model.treeModel
@@ -278,25 +284,23 @@ expandAllCollapseAllButtons =
         ]
 
 
-selectedNodeDetails : Model -> Html Msg
-selectedNodeDetails model =
-    let
-        selectedDetails =
-            Maybe.map (\nodeData -> nodeData.uid ++ ": " ++ nodeData.subject) model.selectedNode
-                |> Maybe.withDefault "(nothing selected)"
 
-        --selectedHighlight = Maybe.map (\nodeData -> nodeData.highlight) model.selectedNode
-    in
-    div
-        [ css [ width auto ] ]
-        [ Mwc.TextField.view
-            [ Mwc.TextField.readonly True
-            , Mwc.TextField.label selectedDetails
-            ]
-        ]
-
-
-
+--selectedNodeDetails : Model -> Html Msg
+--selectedNodeDetails model =
+--    let
+--        selectedDetails =
+--            Maybe.map (\nodeData -> nodeData.uid ++ ": " ++ nodeData.subject) model.selectedNode
+--                |> Maybe.withDefault "(nothing selected)"
+--
+--        --selectedHighlight = Maybe.map (\nodeData -> nodeData.highlight) model.selectedNode
+--    in
+--    div
+--        [ css [ width auto ] ]
+--        [ Mwc.TextField.view
+--            [ Mwc.TextField.readonly True
+--            , Mwc.TextField.label selectedDetails
+--            ]
+--        ]
 -- avilitiy to view tree
 
 
@@ -314,7 +318,8 @@ view model =
         --    , option [] [text "ECB"], option [] [text "BOJ"], option [] [text "RBA"]
         --    , option [] [text "BOC"], option [] [text "Others"]]
         , expandAllCollapseAllButtons
-        , selectedNodeDetails model
+
+        --, selectedNodeDetails model
         , map TreeViewMsg (TreeView.view2 model.selectedNode model.treeModel |> fromUnstyled)
         ]
 
@@ -381,7 +386,7 @@ translation2 ( pattern, value ) uid =
         Value.IfThenElse _ condition thenBranch elseBranch ->
             let
                 data =
-                    NodeData uid (Value.toString condition) pattern false
+                    NodeData uid (Value.toString condition) pattern False
 
                 uids =
                     createUIDS 2 uid
@@ -401,7 +406,7 @@ translation2 ( pattern, value ) uid =
         Value.PatternMatch tpe param patterns ->
             let
                 data =
-                    NodeData uid (Value.toString param) pattern false
+                    NodeData uid (Value.toString param) pattern True
 
                 maybePatterns =
                     toMaybeList patterns
@@ -420,7 +425,7 @@ translation2 ( pattern, value ) uid =
 
         _ ->
             --Value.toString value ++ (fromInt uid) ++ " ------ "
-            Tree.Node { data = NodeData uid (Value.toString value) pattern false, children = [] }
+            Tree.Node { data = NodeData uid (Value.toString value) pattern False, children = [] }
 
 
 createUIDS : Int -> String -> List String
@@ -486,7 +491,7 @@ createUIDS range currentUID =
 
 
 type NodeDataMsg
-    = EditContent String String -- uid content
+    = EditHighlight String Bool -- uid content
 
 
 viewNodeData : Maybe NodeData -> Tree.Node NodeData -> Html.Html NodeDataMsg
@@ -495,21 +500,24 @@ viewNodeData selectedNode node =
         nodeData =
             Tree.dataOf node
 
+        --selectedParent =
+        --Tree.dataOf (String.slice 0 -2 nodeData.uid)
         selected =
             selectedNode
                 |> Maybe.map (\sN -> nodeData.uid == sN.uid)
                 |> Maybe.withDefault False
     in
-    if selected then
-        --input
-        --    [ onInput <| EditContent nodeData.uid
-        --    , type_ "text"
-        --    , value nodeData.subject
+    if nodeData.highlight then
+        Element.layout
+            [ Background.color (rgb 0 0.5 0)
+            , Border.color (rgb 0 0.7 0)
+            ]
+            (Element.text (getLabel nodeData.pattern ++ nodeData.subject))
+        --label
+        --    [ onClick (EditHighlight nodeData.uid True)
         --    ]
         --    []
         --    |> toUnstyled
-        text (getLabel nodeData.pattern ++ nodeData.subject ++ "str")
-            |> toUnstyled
 
     else
         text (getLabel nodeData.pattern ++ nodeData.subject)
