@@ -102,26 +102,26 @@ initialModel () =
                             (Value.Variable () [ "Is Segregated Cash" ])
                             (Value.PatternMatch ()
                                 (Value.Variable () [ "Classify By Counter Party ID" ])
-                                [ ( Value.LiteralPattern () (StringLiteral "FRD"), Value.Variable () [ "1.A.4.1" ] )
-                                , ( Value.LiteralPattern () (StringLiteral "BOE"), Value.Variable () [ "1.A.4.2" ] )
-                                , ( Value.LiteralPattern () (StringLiteral "SNB"), Value.Variable () [ "1.A.4.3" ] )
-                                , ( Value.LiteralPattern () (StringLiteral "ECB"), Value.Variable () [ "1.A.4.4" ] )
-                                , ( Value.LiteralPattern () (StringLiteral "BOI"), Value.Variable () [ "1.A.4.5" ] )
-                                , ( Value.LiteralPattern () (StringLiteral "RBA"), Value.Variable () [ "1.A.4.6" ] )
-                                , ( Value.LiteralPattern () (StringLiteral "BOC"), Value.Variable () [ "1.A.4.7" ] )
-                                , ( Value.LiteralPattern () (StringLiteral "Others"), Value.Variable () [ "1.A.4.8" ] )
+                                [ ( Value.LiteralPattern () (StringLiteral "FRD"), Value.Variable () [ "I.A.4.1" ] )
+                                , ( Value.LiteralPattern () (StringLiteral "BOE"), Value.Variable () [ "I.A.4.2" ] )
+                                , ( Value.LiteralPattern () (StringLiteral "SNB"), Value.Variable () [ "I.A.4.3" ] )
+                                , ( Value.LiteralPattern () (StringLiteral "ECB"), Value.Variable () [ "I.A.4.4" ] )
+                                , ( Value.LiteralPattern () (StringLiteral "BOI"), Value.Variable () [ "I.A.4.5" ] )
+                                , ( Value.LiteralPattern () (StringLiteral "RBA"), Value.Variable () [ "I.A.4.6" ] )
+                                , ( Value.LiteralPattern () (StringLiteral "BOC"), Value.Variable () [ "I.A.4.7" ] )
+                                , ( Value.LiteralPattern () (StringLiteral "Others"), Value.Variable () [ "I.A.4.8" ] )
                                 ]
                             )
                             (Value.PatternMatch ()
                                 (Value.Variable () [ "Classify By Counter Party ID" ])
-                                [ ( Value.LiteralPattern () (StringLiteral "FRD"), Value.Variable () [ "1.A.3.1" ] )
-                                , ( Value.LiteralPattern () (StringLiteral "BOE"), Value.Variable () [ "1.A.3.2" ] )
-                                , ( Value.LiteralPattern () (StringLiteral "SNB"), Value.Variable () [ "1.A.3.3" ] )
-                                , ( Value.LiteralPattern () (StringLiteral "ECB"), Value.Variable () [ "1.A.3.4" ] )
-                                , ( Value.LiteralPattern () (StringLiteral "BOI"), Value.Variable () [ "1.A.3.5" ] )
-                                , ( Value.LiteralPattern () (StringLiteral "RBA"), Value.Variable () [ "1.A.3.6" ] )
-                                , ( Value.LiteralPattern () (StringLiteral "BOC"), Value.Variable () [ "1.A.3.7" ] )
-                                , ( Value.LiteralPattern () (StringLiteral "Others"), Value.Variable () [ "1.A.3.8" ] )
+                                [ ( Value.LiteralPattern () (StringLiteral "FRD"), Value.Variable () [ "I.A.3.1" ] )
+                                , ( Value.LiteralPattern () (StringLiteral "BOE"), Value.Variable () [ "I.A.3.2" ] )
+                                , ( Value.LiteralPattern () (StringLiteral "SNB"), Value.Variable () [ "I.A.3.3" ] )
+                                , ( Value.LiteralPattern () (StringLiteral "ECB"), Value.Variable () [ "I.A.3.4" ] )
+                                , ( Value.LiteralPattern () (StringLiteral "BOI"), Value.Variable () [ "I.A.3.5" ] )
+                                , ( Value.LiteralPattern () (StringLiteral "RBA"), Value.Variable () [ "I.A.3.6" ] )
+                                , ( Value.LiteralPattern () (StringLiteral "BOC"), Value.Variable () [ "I.A.3.7" ] )
+                                , ( Value.LiteralPattern () (StringLiteral "Others"), Value.Variable () [ "I.A.3.8" ] )
                                 ]
                             )
                         )
@@ -132,8 +132,8 @@ initialModel () =
                                 (Value.Variable () [ "O.W.9" ])
                                 (Value.IfThenElse ()
                                     (Value.Variable () [ "Is Feed44 and CostCenter Not 5C55" ])
-                                    (Value.Variable () [ "1.U.1" ])
-                                    (Value.Variable () [ "1.U.4" ])
+                                    (Value.Variable () [ "I.U.1" ])
+                                    (Value.Variable () [ "I.U.4" ])
                                 )
                             )
                             (Value.IfThenElse ()
@@ -142,8 +142,8 @@ initialModel () =
                                 --
                                 (Value.IfThenElse ()
                                     (Value.Variable () [ "Is Feed44 and CostCenter Not 5C55" ])
-                                    (Value.Variable () [ "1.U.2" ])
-                                    (Value.Variable () [ "1.U.4" ])
+                                    (Value.Variable () [ "I.U.2" ])
+                                    (Value.Variable () [ "I.U.4" ])
                                 )
                              --
                             )
@@ -214,7 +214,7 @@ update message model =
         SetDictValueRoot s1 ->
             let
                 newDict1 =
-                    Dict.insert "classifyByPositionType" s1 Dict.empty
+                    Dict.insert "classifyByPositionType" s1 model.dict
             in
             ( { model
                 | dict = newDict1
@@ -227,13 +227,7 @@ update message model =
             --should unset everything except for classifyByPositionType
             let
                 newDict1 =
-                    Dict.insert "classifyByPositionType"
-                        (withDefault
-                            "isCentralBank/Cash"
-                            (Dict.get "classifyByPositionType" model.dict)
-                        )
-                        Dict.empty
-                        |> Dict.insert "isCentralBank" s1
+                    Dict.insert "isCentralBank" s1 model.dict
             in
             ( { model
                 | dict = newDict1
@@ -245,8 +239,7 @@ update message model =
         SetDictValueSegCash s1 ->
             let
                 newDict1 =
-                    Dict.remove "classifyByCounterPartyID" model.dict
-                        |> Dict.insert "isSegregatedCash" s1
+                    Dict.insert "isSegregatedCash" s1 model.dict
             in
             ( { model
                 | dict = newDict1
@@ -271,9 +264,7 @@ update message model =
             --needs to unset isNetUsdAmountNegative & isFeed44andCostCenterNot5C55
             let
                 newDict1 =
-                    Dict.remove "isNetUsdAmountNegative" model.dict
-                        |> Dict.remove "isFeed44andCostCenterNot5C55"
-                        |> Dict.insert "isOnShore" s1
+                    Dict.insert "isOnShore" s1 model.dict
             in
             ( { model
                 | dict = newDict1
@@ -286,8 +277,7 @@ update message model =
             --needs to unset isFeed44andCostCenterNot5C55
             let
                 newDict1 =
-                    Dict.remove "isFeed44andCostCenterNot5C55" model.dict
-                        |> Dict.insert "isNetUsdAmountNegative" s1
+                    Dict.insert "isNetUsdAmountNegative" s1 model.dict
             in
             ( { model
                 | dict = newDict1
@@ -397,26 +387,26 @@ dropdowns model =
                 , label [ id "code-select-1-label", for "code-select-1", class "l-d" ] [ Html.text "Select Counterparty ID:" ]
                 , select [ id "code-select-1", onInput SetDictValueCode, class "dropdown" ]
                     [ option [ value "", disabled True, selected True ] [ Html.text "Select" ]
-                    , option [ value "1.A.4.1/FRD" ] [ Html.text "FRD" ]
-                    , option [ value "1.A.4.2/BOE" ] [ Html.text "BOE" ]
-                    , option [ value "1.A.4.3/SNB" ] [ Html.text "SNB" ]
-                    , option [ value "1.A.4.4/ECB" ] [ Html.text "ECB" ]
-                    , option [ value "1.A.4.5/BOI" ] [ Html.text "BOJ" ]
-                    , option [ value "1.A.4.6/RBA" ] [ Html.text "RBA" ]
-                    , option [ value "1.A.4.7/BOC" ] [ Html.text "BOC" ]
-                    , option [ value "1.A.4.8/other" ] [ Html.text "other" ]
+                    , option [ value "I.A.4.1/FRD" ] [ Html.text "FRD" ]
+                    , option [ value "I.A.4.2/BOE" ] [ Html.text "BOE" ]
+                    , option [ value "I.A.4.3/SNB" ] [ Html.text "SNB" ]
+                    , option [ value "I.A.4.4/ECB" ] [ Html.text "ECB" ]
+                    , option [ value "I.A.4.5/BOI" ] [ Html.text "BOJ" ]
+                    , option [ value "I.A.4.6/RBA" ] [ Html.text "RBA" ]
+                    , option [ value "I.A.4.7/BOC" ] [ Html.text "BOC" ]
+                    , option [ value "I.A.4.8/other" ] [ Html.text "other" ]
                     ]
                 , label [ id "code-select-2-label", for "code-select-2", class "l-d" ] [ Html.text "Select Counterparty ID:" ]
                 , select [ id "code-select-2", onInput SetDictValueCode, class "dropdown" ]
                     [ option [ value "", disabled True, selected True ] [ Html.text "Select" ]
-                    , option [ value "1.A.3.1/FRD" ] [ Html.text "FRD" ]
-                    , option [ value "1.A.3.2/BOE" ] [ Html.text "BOE" ]
-                    , option [ value "1.A.3.3/SNB" ] [ Html.text "SNB" ]
-                    , option [ value "1.A.3.4/ECB" ] [ Html.text "ECB" ]
-                    , option [ value "1.A.3.5/BOI" ] [ Html.text "BOJ" ]
-                    , option [ value "1.A.3.6/RBA" ] [ Html.text "RBA" ]
-                    , option [ value "1.A.3.7/BOC" ] [ Html.text "BOC" ]
-                    , option [ value "1.A.3.8/other" ] [ Html.text "other" ]
+                    , option [ value "I.A.3.1/FRD" ] [ Html.text "FRD" ]
+                    , option [ value "I.A.3.2/BOE" ] [ Html.text "BOE" ]
+                    , option [ value "I.A.3.3/SNB" ] [ Html.text "SNB" ]
+                    , option [ value "I.A.3.4/ECB" ] [ Html.text "ECB" ]
+                    , option [ value "I.A.3.5/BOI" ] [ Html.text "BOJ" ]
+                    , option [ value "I.A.3.6/RBA" ] [ Html.text "RBA" ]
+                    , option [ value "I.A.3.7/BOC" ] [ Html.text "BOC" ]
+                    , option [ value "I.A.3.8/other" ] [ Html.text "other" ]
                     ]
                 ]
             , Html.div [ id "central-bank-no-child" ]
@@ -438,8 +428,8 @@ dropdowns model =
                     [ label [ id "negative-no-child-select-label", for "negative-no-child-select", class "l-d" ] [ Html.text "Is Feed44 and CostCenter Not 5C55: " ]
                     , select [ id "negative-no-child-select", onInput SetDictValueFeed, class "dropdown" ]
                         [ option [ value "", disabled True, selected True ] [ Html.text "Select" ]
-                        , option [ value "1.U.1/True" ] [ Html.text "Yes" ]
-                        , option [ value "1.U.4/False" ] [ Html.text "No" ]
+                        , option [ value "I.U.1/True" ] [ Html.text "Yes" ]
+                        , option [ value "I.U.4/False" ] [ Html.text "No" ]
                         ]
                     ]
                 , label [ id "negative-select-2-label", for "negative-select-2", class "l-d" ] [ Html.text "Is NetUsd Amount Negative: " ]
@@ -452,8 +442,8 @@ dropdowns model =
                     [ label [ id "negative-no-child-select-2-label", for "negative-no-child-select-2", class "l-d" ] [ Html.text "Is Feed44 and CostCenter Not 5C55: " ]
                     , select [ id "negative-no-child-select-2", onInput SetDictValueFeed, class "dropdown" ]
                         [ option [ value "", disabled True, selected True ] [ Html.text "Select" ]
-                        , option [ value "1.U.2/True" ] [ Html.text "Yes" ]
-                        , option [ value "1.U.4/False" ] [ Html.text "No" ]
+                        , option [ value "I.U.2/True" ] [ Html.text "Yes" ]
+                        , option [ value "I.U.4/False" ] [ Html.text "No" ]
                         ]
                     ]
                 ]
