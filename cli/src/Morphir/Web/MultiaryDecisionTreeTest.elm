@@ -457,7 +457,6 @@ dropdowns model =
                         ]
                     ]
                 ]
-            , button [ id "show-button" ] [ Html.text "Show me all inputs" ]
             ]
         ]
 
